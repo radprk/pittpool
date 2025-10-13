@@ -1,14 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 
-// Extend the Request interface directly
-declare module 'express-serve-static-core' {
-  interface Request {
-    userId?: string;
-    user?: any;
+// Extend Express Request type globally
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+      user?: any;
+    }
   }
 }
 
+// Export AuthRequest as just Request (since we extended it globally)
 export type AuthRequest = Request;
 
 export const authenticateToken = (

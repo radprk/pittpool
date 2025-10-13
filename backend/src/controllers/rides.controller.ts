@@ -67,7 +67,7 @@ export const getAllRides = async (req: AuthRequest, res: Response): Promise<void
 
     const rides = await prisma.ride.findMany({
       where: {
-        status: (status as string) || 'ACTIVE',
+        status: (status as any) || 'ACTIVE',
         departureTime: {
           gte: new Date(), // Only future rides
         },
