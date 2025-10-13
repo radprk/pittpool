@@ -1,0 +1,14 @@
+{
+  "name": "pittpool-load-tests",
+  "version": "1.0.0",
+  "description": "Load testing scenarios for PittPool",
+  "scripts": {
+    "test:quick": "artillery run quick-test.yml",
+    "test:full": "artillery run load-test.yml",
+    "test:report": "artillery run --output report.json load-test.yml && artillery report report.json"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1"
+  }
+}
+

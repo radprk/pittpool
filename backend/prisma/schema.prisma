@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  phone             String   @unique
+  password          String
+  name              String
+  profilePhoto      String?
+  role              UserRole @default(RIDER)
+  verificationStatus VerificationStatus @default(PENDING)
+  rating            Float    @default(0)
+  totalRides        Int      @default(0)
+  
+  // Driver specific
+  driverLicense     String?
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleYear       Int?
+  licensePlate      String?
+  insuranceProof    String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  ridesAsDriver     Ride[]
+  rideRequests      RideRequest[]
+  bookingsAsRider   Booking[]
+  messagesSent      Message[] @relation("SentMessages")
+  messagesReceived  Message[] @relation("ReceivedMessages")
+  ratingsGiven      Rating[] @relation("RatingsGiven")
+  ratingsReceived   Rating[] @relation("RatingsReceived")
+}
+
+enum UserRole {
+  DRIVER
+  RIDER
+  BOTH
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model Ride {
+  id                String   @id @default(uuid())
+  driverId          String
+  driver            User     @relation(fields: [driverId], references: [id])
+  
+  startLat          Float
+  startLng          Float
+  startAddress      String
+  endLat            Float
+  endLng            Float
+  endAddress        String
+  
+  departureTime     DateTime
+  availableSeats    Int
+  pricePerSeat      Float
+  routeFlexibility  RouteFlexibility @default(FLEXIBLE)
+  status            RideStatus @default(ACTIVE)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  bookings          Booking[]
+  messages          Message[]
+}
+
+enum RouteFlexibility {
+  RIGID
+  FLEXIBLE
+}
+
+enum RideStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model RideRequest {
+  id                String   @id @default(uuid())
+  riderId           String
+  rider             User     @relation(fields: [riderId], references: [id])
+  
+  pickupLat         Float
+  pickupLng         Float
+  pickupAddress     String
+  dropoffLat        Float
+  dropoffLng        Float
+  dropoffAddress    String
+  
+  desiredTime       DateTime
+  timeFlexibility   Int      @default(30) // minutes
+  seatsNeeded       Int
+  maxPrice          Float?
+  status            RequestStatus @default(OPEN)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  bookings          Booking[]
+  messages          Message[]
+}
+
+enum RequestStatus {
+  OPEN
+  MATCHED
+  COMPLETED
+  CANCELLED
+}
+
+model Booking {
+  id                String   @id @default(uuid())
+  rideId            String
+  ride              Ride     @relation(fields: [rideId], references: [id])
+  rideRequestId     String?
+  rideRequest       RideRequest? @relation(fields: [rideRequestId], references: [id])
+  riderId           String
+  rider             User     @relation(fields: [riderId], references: [id])
+  
+  pickupLat         Float
+  pickupLng         Float
+  pickupAddress     String
+  dropoffLat        Float
+  dropoffLng        Float
+  dropoffAddress    String
+  
+  seatsBooked       Int
+  agreedPrice       Float
+  status            BookingStatus @default(PENDING)
+  paymentStatus     PaymentStatus @default(HOLD)
+  stripePaymentId   String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  rating            Rating?
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  HOLD
+  CHARGED
+  REFUNDED
+}
+
+model Message {
+  id                String   @id @default(uuid())
+  senderId          String
+  sender            User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId        String
+  receiver          User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  rideId            String?
+  ride              Ride?    @relation(fields: [rideId], references: [id])
+  rideRequestId     String?
+  rideRequest       RideRequest? @relation(fields: [rideRequestId], references: [id])
+  
+  content           String
+  sentAt            DateTime @default(now())
+  readAt            DateTime?
+}
+
+model Rating {
+  id                String   @id @default(uuid())
+  bookingId         String   @unique
+  booking           Booking  @relation(fields: [bookingId], references: [id])
+  raterId           String
+  rater             User     @relation("RatingsGiven", fields: [raterId], references: [id])
+  rateeId           String
+  ratee             User     @relation("RatingsReceived", fields: [rateeId], references: [id])
+  
+  stars             Int      // 1-5
+  review            String?
+  createdAt         DateTime @default(now())
+}
+

@@ -1,0 +1,165 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up - 5 users per second"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up - 10 users per second"
+    - duration: 60
+      arrivalRate: 20
+      name: "Peak load - 20 users per second"
+  processor: "./test-scenarios.js"
+  
+scenarios:
+  # Scenario 1: Driver posts a ride
+  - name: "Driver Journey"
+    weight: 3
+    flow:
+      - function: "generateDriverData"
+      - post:
+          url: "/api/auth/register"
+          json:
+            name: "{{ name }}"
+            email: "{{ email }}"
+            phone: "{{ phone }}"
+            password: "{{ password }}"
+            role: "DRIVER"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+      - think: 2
+      - post:
+          url: "/api/rides"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            startLat: 40.4406
+            startLng: -79.9959
+            startAddress: "Downtown Pittsburgh, PA"
+            endLat: 40.4433
+            endLng: -79.9436
+            endAddress: "Oakland, Pittsburgh, PA"
+            departureTime: "{{ departureTime }}"
+            availableSeats: 3
+            pricePerSeat: 5.00
+            routeFlexibility: "FLEXIBLE"
+          capture:
+            - json: "$.ride.id"
+              as: "rideId"
+      - think: 1
+      - get:
+          url: "/api/rides/my-rides"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  # Scenario 2: Rider creates request and books a ride
+  - name: "Rider Journey"
+    weight: 3
+    flow:
+      - function: "generateRiderData"
+      - post:
+          url: "/api/auth/register"
+          json:
+            name: "{{ name }}"
+            email: "{{ email }}"
+            phone: "{{ phone }}"
+            password: "{{ password }}"
+            role: "RIDER"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+            - json: "$.user.id"
+              as: "userId"
+      - think: 2
+      - post:
+          url: "/api/requests"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            pickupLat: 40.4406
+            pickupLng: -79.9959
+            pickupAddress: "Downtown Pittsburgh, PA"
+            dropoffLat: 40.4433
+            dropoffLng: -79.9436
+            dropoffAddress: "Oakland, Pittsburgh, PA"
+            desiredTime: "{{ desiredTime }}"
+            timeFlexibility: 30
+            seatsNeeded: 1
+            maxPrice: 10.00
+          capture:
+            - json: "$.request.id"
+              as: "requestId"
+      - think: 1
+      - get:
+          url: "/api/rides"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$[0].id"
+              as: "availableRideId"
+      - think: 2
+      - post:
+          url: "/api/bookings"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            rideId: "{{ availableRideId }}"
+            rideRequestId: "{{ requestId }}"
+            pickupLat: 40.4406
+            pickupLng: -79.9959
+            pickupAddress: "Downtown Pittsburgh, PA"
+            dropoffLat: 40.4433
+            dropoffLng: -79.9436
+            dropoffAddress: "Oakland, Pittsburgh, PA"
+            seatsBooked: 1
+            agreedPrice: 5.00
+          capture:
+            - json: "$.booking.id"
+              as: "bookingId"
+
+  # Scenario 3: Browse rides (anonymous)
+  - name: "Browse Rides"
+    weight: 2
+    flow:
+      - get:
+          url: "/api/rides"
+      - think: 1
+      - get:
+          url: "/api/rides"
+
+  # Scenario 4: User login and profile update
+  - name: "User Profile Update"
+    weight: 2
+    flow:
+      - function: "generateUserData"
+      - post:
+          url: "/api/auth/register"
+          json:
+            name: "{{ name }}"
+            email: "{{ email }}"
+            phone: "{{ phone }}"
+            password: "{{ password }}"
+            role: "BOTH"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - think: 2
+      - get:
+          url: "/api/users/me"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - think: 1
+      - put:
+          url: "/api/users/me"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            vehicleMake: "Toyota"
+            vehicleModel: "Camry"
+            vehicleYear: 2020
+            licensePlate: "ABC1234"
+
