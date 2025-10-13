@@ -18,27 +18,59 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS configuration function that checks origins properly
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: Function) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'https://pittpool.vercel.app',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean);
+
+    // Check if origin is in allowed list OR ends with .vercel.app
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
 const io = new Server(server, {
   cors: {
-    origin: [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      'https://pittpool.vercel.app',
-      'https://*.vercel.app'
-    ],
+    origin: function (origin: string | undefined, callback: Function) {
+      if (!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://pittpool.vercel.app',
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
+
+      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
 });
 
 // Middleware
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'https://pittpool.vercel.app',
-    'https://*.vercel.app'
-  ],
-  credentials: true,
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
