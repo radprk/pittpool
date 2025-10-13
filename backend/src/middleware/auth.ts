@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 
-export interface AuthRequest extends Request {
-  userId?: string;
-  user?: any;
+// Extend the Request interface directly
+declare module 'express-serve-static-core' {
+  interface Request {
+    userId?: string;
+    user?: any;
+  }
 }
 
+export type AuthRequest = Request;
+
 export const authenticateToken = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
@@ -28,4 +33,3 @@ export const authenticateToken = (
     return;
   }
 };
-
