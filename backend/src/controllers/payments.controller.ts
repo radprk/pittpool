@@ -3,9 +3,7 @@ import Stripe from 'stripe';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 export const createPaymentIntent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
