@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ridesAPI } from '../services/api';
 import { useMapbox } from '../hooks/useMapbox';
 import type { LocationSuggestion } from '../types';
 
 const PostRidePage = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { searchAddress } = useMapbox();
   
   const [formData, setFormData] = useState({
@@ -29,6 +30,9 @@ const PostRidePage = () => {
   const createRideMutation = useMutation({
     mutationFn: (data: any) => ridesAPI.create(data),
     onSuccess: () => {
+      // Invalidate rides cache so new ride shows up immediately
+      queryClient.invalidateQueries({ queryKey: ['rides'] });
+      queryClient.invalidateQueries({ queryKey: ['myRides'] });
       navigate('/my-rides');
     },
     onError: (error: any) => {
