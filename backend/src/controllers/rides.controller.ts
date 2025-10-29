@@ -51,6 +51,12 @@ export const createRide = async (req: AuthRequest, res: Response): Promise<void>
             vehicleYear: true,
           },
         },
+        bookings: {
+          select: {
+            seatsBooked: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -65,11 +71,14 @@ export const getAllRides = async (req: AuthRequest, res: Response): Promise<void
   try {
     const { status } = req.query;
 
+    // Allow rides from the past hour to handle time sync issues
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
     const rides = await prisma.ride.findMany({
       where: {
         status: (status as any) || 'ACTIVE',
         departureTime: {
-          gte: new Date(), // Only future rides
+          gte: oneHourAgo, // Allow recent rides to account for time sync
         },
       },
       include: {
